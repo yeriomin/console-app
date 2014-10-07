@@ -1,0 +1,21 @@
+{
+    "name": "yeriomin/console-app",
+    "license": "MIT",
+    "description": "A skeleton PHP console app with helpers for logging, running in a single instance, console input parameters.",
+    "authors": [
+        {
+            "name": "Sergey Yeriomin",
+            "email": "yeriomin@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "monolog/monolog": ">=1.8.0",
+        "ulrichsg/getopt-php": ">=2.1.0"
+    },
+    "autoload": {
+        "psr-0": {
+            "ConsoleApp": "src/"
+        }
+    }
+}
