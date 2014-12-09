@@ -1,16 +1,15 @@
 <?php
-namespace ConsoleApp;
+namespace Yeriomin\ConsoleApp;
 
 use Psr\Log;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
-use Ulrichsg\Getopt\Getopt;
-use Ulrichsg\Getopt\Option;
+use Yeriomin\Getopt;
 
 /**
  * Abstract console service
  *
- * @author eremin
+ * @author yeriomin
  */
 abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareInterface
 {
@@ -30,7 +29,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     /**
      * Console arguments parser and storage
      *
-     * @var Getopt\Getopt
+     * @var \Yeriomin\Getopt\Getopt
      */
     protected $getopt;
 
@@ -62,15 +61,15 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
             $this->getopt->parse();
         } catch (UnexpectedValueException $e) {
             echo $e->getMessage() . "\n";
-            echo $this->getopt->getTextMessage() . "\n";
+            echo $this->getopt->getUsageMessage() . "\n";
             exit(1);
         }
-        if ($this->getopt->getOption('help')) {
-            echo $this->getopt->getTextMessage() . "\n";
+        if ($this->getopt->h || $this->getopt->help) {
+            echo $this->getopt->getUsageMessage() . "\n";
             exit(0);
         }
         // Reading configuration file if provided
-        $configPath = $this->getopt->getOption('config');
+        $configPath = $this->getopt->config;
         if (!empty($configPath) && !file_exists($configPath)) {
             throw ConsoleAppException(
                 'Failed to read configuration from "' . $configPath . '"'
@@ -296,14 +295,15 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      */
     protected function initGetopt()
     {
-        $optionHelp = new Option('h', 'help', Getopt::OPTIONAL_ARGUMENT);
-        $optionHelp->setDescription('Display this help message');
-        $optionConfig = new Option('c', 'config', Getopt::REQUIRED_ARGUMENT);
-        $optionConfig->setDescription('Path to configuration ini file');
-        return new Getopt(
-            array($optionHelp, $optionConfig),
-            Getopt::OPTIONAL_ARGUMENT
-        );
+
+        $optionHelp = new OptionDefinition('h', 'help', 'Show this message');
+        $optionConfig = new OptionDefinition('c', 'config', 'Path to configuration ini file');
+        $getopt = new \Yeriomin\Getopt\Getopt();
+        $getopt
+            ->addOptionDefinition($optionHelp)
+            ->addOptionDefinition($optionConfig)
+        ;
+        return $getopt;
     }
 
     /**

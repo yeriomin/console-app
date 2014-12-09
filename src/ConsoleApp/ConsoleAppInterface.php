@@ -1,12 +1,12 @@
 <?php
-namespace ConsoleApp;
+namespace Yeriomin\ConsoleApp;
 
 /**
  * Console service interface
  * The only method tha needs to be implemented is run()
  * It must do all the work...
  *
- * @author eremin
+ * @author yeriomin
  */
 interface ConsoleAppInterface
 {

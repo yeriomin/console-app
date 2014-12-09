@@ -1,10 +1,10 @@
 <?php
-namespace ConsoleApp;
+namespace Yeriomin\ConsoleApp;
 
 /**
  * Service exception
  *
- * @author eremin
+ * @author yeriomin
  */
 class ConsoleAppException extends Exception
 {
