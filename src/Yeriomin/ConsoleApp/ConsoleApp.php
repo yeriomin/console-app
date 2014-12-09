@@ -219,8 +219,9 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      */
     protected function getServiceName()
     {
+        $className = array_pop(explode('\\', get_called_class()));
         $nameParts = array();
-        foreach (explode('_', get_called_class()) as $part) {
+        foreach (explode('_', $className) as $part) {
             $nameParts[] = lcfirst($part);
         }
         return implode('-', $nameParts);
@@ -243,6 +244,8 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
             $command = 'ps h -p ' . $lock;
             $output = array();
             exec($command, $output);
+            var_dump($lock);
+            var_dump($output);
             if (!empty($output)) {
                 throw new ConsoleAppException('Could not lock ' . $filename);
             }
@@ -296,8 +299,8 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     protected function initGetopt()
     {
 
-        $optionHelp = new OptionDefinition('h', 'help', 'Show this message');
-        $optionConfig = new OptionDefinition('c', 'config', 'Path to configuration ini file');
+        $optionHelp = new \Yeriomin\Getopt\OptionDefinition('h', 'help', 'Show this message');
+        $optionConfig = new \Yeriomin\Getopt\OptionDefinition('c', 'config', 'Path to configuration ini file');
         $getopt = new \Yeriomin\Getopt\Getopt();
         $getopt
             ->addOptionDefinition($optionHelp)

@@ -6,7 +6,7 @@ namespace Yeriomin\ConsoleApp;
  *
  * @author yeriomin
  */
-class ConsoleAppException extends Exception
+class ConsoleAppException extends \Exception
 {
 
 }
