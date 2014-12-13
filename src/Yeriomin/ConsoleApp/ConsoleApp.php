@@ -7,7 +7,9 @@ use Monolog\Handler\StreamHandler;
 use Yeriomin\Getopt;
 
 /**
- * Abstract console service
+ * A template for a console application
+ * manages logging, logs start and finish, manages console arguments,
+ * prevents running of several apps simultaneously
  *
  * @author yeriomin
  */
@@ -56,15 +58,15 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     public function __construct()
     {
         // Getting console arguments.
-        $this->getopt = $this->initGetopt();
+        $this->getopt = $this->getGetopt();
         try {
             $this->getopt->parse();
-        } catch (UnexpectedValueException $e) {
+        } catch (\Yeriomin\Getopt\GetoptException $e) {
             echo $e->getMessage() . "\n";
             echo $this->getopt->getUsageMessage() . "\n";
             exit(1);
         }
-        if ($this->getopt->h || $this->getopt->help) {
+        if ($this->getopt->h) {
             echo $this->getopt->getUsageMessage() . "\n";
             exit(0);
         }
@@ -77,9 +79,10 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
         }
         $this->config = $this->readConfig($configPath);
         // Filling with defaults if needed
+        $appName = $this->getAppName();
         if (empty($this->config)) {
             $this->config['oneInstanceOnly'] = true;
-            $this->config['logPath'] = $this->getServiceName() . '.log';
+            $this->config['logPath'] = $appName . '.log';
         }
         // Locking script to let only one instance run at a time.
         if ($this->config['oneInstanceOnly']) {
@@ -88,7 +91,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
         // Attaching signal and error handlers
         $this->attachHandlers();
         // Preparations complete
-        $this->log('Starting ' . get_called_class());
+        $this->log('Starting ' . $appName);
     }
 
     /**
@@ -98,7 +101,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      */
     public function __destruct()
     {
-        $this->log('Stopping ' . get_called_class());
+        $this->log('Stopping ' . $this->getAppName());
         if ($this->config['oneInstanceOnly']) {
             $this->unlock($this->config);
         }
@@ -124,8 +127,6 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      * Unlock and delete lock file
      *
      * @param array $config Configuration storage
-     *
-     * @return void
      */
     public function unlock(array $config)
     {
@@ -141,9 +142,6 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     /**
      * We need this to handle termination signals
      *
-     * @param array $config Configuration storage
-     *
-     * @return void
      */
     public function signalHandler()
     {
@@ -156,8 +154,6 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     /**
      * We need this to delete lock file when fatal errors happen
      * while showing the error itself
-     *
-     * @param array $config Configuration storage
      *
      * @return boolean
      */
@@ -180,7 +176,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     protected function log($message, $priority = Logger::INFO)
     {
         if (null == $this->logger) {
-            $this->setLogger($this->initLogger($this->config));
+            $this->setLogger($this->getLogger($this->config));
         }
         $this->logger->log($priority, $message);
     }
@@ -204,20 +200,24 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      *
      * @return Psr\Log\LoggerInterface
      */
-    protected function initLogger(array $config)
+    protected function getLogger(array $config)
     {
-        $logger = new Logger($this->getServiceName());
+        $logger = new Logger($this->getAppName());
         $logger->pushHandler(new StreamHandler('php://stdout'));
-        $logger->pushHandler(new StreamHandler($this->getLogFileName($config)));
+        $logFileName = empty($config['logFile'])
+            ? $this->getLogFileName($config)
+            : $config['logFile']
+        ;
+        $logger->pushHandler(new StreamHandler($logFileName));
         return $logger;
     }
 
     /**
-     * Get dash-delimited service name without "Service_" part
+     * Get dash-delimited app name
      *
      * @return string
      */
-    protected function getServiceName()
+    protected function getAppName()
     {
         $className = array_pop(explode('\\', get_called_class()));
         $nameParts = array();
@@ -244,8 +244,6 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
             $command = 'ps h -p ' . $lock;
             $output = array();
             exec($command, $output);
-            var_dump($lock);
-            var_dump($output);
             if (!empty($output)) {
                 throw new ConsoleAppException('Could not lock ' . $filename);
             }
@@ -262,14 +260,8 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      */
     private function getLockFileName(array $config)
     {
-        $path = sys_get_temp_dir();
-        if (!empty($config['lockDir'])
-            && file_exists($config['lockDir'])
-        ) {
-            $path = $config['lockDir'];
-        }
-        $name = $this->getServiceName();
-        return realpath($path) . '/' . $name . '.lock';
+        $path = !empty($config['lockDir']) ? $config['lockDir'] : '';
+        return $this->getTempFileName($path) . '.lock';
     }
 
     /**
@@ -281,14 +273,29 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      */
     private function getLogFileName(array $config)
     {
-        $path = sys_get_temp_dir();
-        if (!empty($config['logDir'])
-            && file_exists($this['logDir'])
-        ) {
-            $path = $config['logDir'];
+        $path = !empty($config['logDir']) ? $config['logDir'] : '';
+        return $this->getTempFileName($path) . '.log';
+    }
+
+    /**
+     * Build a path to a file in a temp dir for locking or logging
+     *
+     * @param string $path
+     * @return string
+     * @throws ConsoleAppException
+     */
+    private function getTempFileName($path = '')
+    {
+        if (!empty($path)) {
+            if (!is_dir($path)) {
+                throw new ConsoleAppException(
+                    '"' . $path . '" is not a directory'
+                );
+            }
+        } else {
+            $path = sys_get_temp_dir();
         }
-        $name = $this->getServiceName();
-        return realpath($path) . '/' . $name . '.log';
+        return realpath($path) . DIRECTORY_SEPARATOR . $this->getAppName();
     }
 
     /**
@@ -296,11 +303,18 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      *
      * @return Getopt
      */
-    protected function initGetopt()
+    protected function getGetopt()
     {
-
-        $optionHelp = new \Yeriomin\Getopt\OptionDefinition('h', 'help', 'Show this message');
-        $optionConfig = new \Yeriomin\Getopt\OptionDefinition('c', 'config', 'Path to configuration ini file');
+        $optionHelp = new \Yeriomin\Getopt\OptionDefinition(
+            'h',
+            'help',
+            'Show this message'
+        );
+        $optionConfig = new \Yeriomin\Getopt\OptionDefinition(
+            'c',
+            'config',
+            'Path to configuration ini file'
+        );
         $getopt = new \Yeriomin\Getopt\Getopt();
         $getopt
             ->addOptionDefinition($optionHelp)
@@ -320,7 +334,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     private function readConfig($path = '')
     {
         if (empty($path)) {
-            $path = $this->getServiceName() . '.ini';
+            $path = $this->getAppName() . '.ini';
         }
         $result = array();
         if (file_exists($path)) {
