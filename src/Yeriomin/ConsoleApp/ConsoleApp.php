@@ -1,7 +1,6 @@
 <?php
 namespace Yeriomin\ConsoleApp;
 
-use Psr\Log;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Yeriomin\Getopt;
@@ -338,10 +337,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
         }
         $result = array();
         if (file_exists($path)) {
-            $result = parse_ini_file($path);
-            if ($result === false) {
-                $result = array();
-            }
+            $result = new \Configula\Config($path);
         }
         return $result;
     }
