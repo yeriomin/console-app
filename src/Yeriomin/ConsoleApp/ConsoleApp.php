@@ -79,13 +79,14 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
         $this->config = $this->readConfig($configPath);
         // Filling with defaults if needed
         $appName = $this->getAppName();
-        if (empty($this->config)) {
+        if (count($this->config) == 0) {
             $this->config['oneInstanceOnly'] = true;
             $this->config['logPath'] = $appName . '.log';
         }
         // Locking script to let only one instance run at a time.
         if ($this->config['oneInstanceOnly']) {
-            $this->lock($this->config);
+            $lockFile = $this->getLockFileName($this->config);
+            Lock::getInstance()->lock($lockFile);
         }
         // Attaching signal and error handlers
         $this->attachHandlers();
@@ -102,7 +103,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     {
         $this->log('Stopping ' . $this->getAppName());
         if ($this->config['oneInstanceOnly']) {
-            $this->unlock($this->config);
+            Lock::getInstance()->unlock();
         }
     }
 
@@ -119,23 +120,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
                 pcntl_signal($signal, array(&$this, 'signalHandler'));
             }
         }
-        set_error_handler(array(&$this, 'errorHandler'));
-    }
-
-    /**
-     * Unlock and delete lock file
-     *
-     * @param array $config Configuration storage
-     */
-    public function unlock(array $config)
-    {
-        $filename = $this->getLockFileName($config);
-        if (file_exists($filename)) {
-            $lockSaved = (integer) file_get_contents($filename);
-            if ($lockSaved == getmypid()) {
-                unlink($filename);
-            }
-        }
+        set_error_handler(array($this, 'errorHandler'), E_ERROR & E_USER_ERROR);
     }
 
     /**
@@ -145,7 +130,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     public function signalHandler()
     {
         if ($this->config['oneInstanceOnly']) {
-            $this->unlock($this->config);
+            Lock::getInstance()->unlock();
         }
         die();
     }
@@ -156,11 +141,12 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      *
      * @return boolean
      */
-    public function errorHandler()
+    public function errorHandler($errno, $errstr)
     {
         if ($this->config['oneInstanceOnly']) {
-            $this->unlock($this->config);
+            Lock::getInstance()->unlock();
         }
+
         return false;
     }
 
@@ -187,7 +173,8 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      *
      * @return null
      */
-    public function setLogger(\Psr\Log\LoggerInterface $logger) {
+    public function setLogger(\Psr\Log\LoggerInterface $logger)
+    {
         $this->logger = $logger;
         return null;
     }
@@ -224,30 +211,6 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
             $nameParts[] = lcfirst($part);
         }
         return implode('-', $nameParts);
-    }
-
-    /**
-     * Attempt to create and lock a lock file
-     *
-     * @throws ConsoleAppException
-     *
-     * @param array $config Configuration storage
-     *
-     * @return void
-     */
-    private function lock(array $config)
-    {
-        $filename = $this->getLockFileName($config);
-        if (file_exists($filename)) {
-            $lock = (integer) file_get_contents($filename);
-            $command = 'ps h -p ' . $lock;
-            $output = array();
-            exec($command, $output);
-            if (!empty($output)) {
-                throw new ConsoleAppException('Could not lock ' . $filename);
-            }
-        }
-        file_put_contents($filename, getmypid());
     }
 
     /**
@@ -337,9 +300,9 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
         }
         $result = array();
         if (file_exists($path)) {
-            $result = new \Configula\Config($path);
+            $configula = new \Configula\Config();
+            $result = $configula->parseConfigFile($path);
         }
         return $result;
     }
-
 }
