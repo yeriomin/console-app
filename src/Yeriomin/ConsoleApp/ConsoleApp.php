@@ -117,7 +117,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     {
         if (function_exists('pcntl_signal')) {
             foreach (self::$signalsToCatch as $signal) {
-                pcntl_signal($signal, array(&$this, 'signalHandler'));
+                pcntl_signal($signal, array($this, 'signalHandler'));
             }
         }
         set_error_handler(array($this, 'errorHandler'), E_ERROR & E_USER_ERROR);
