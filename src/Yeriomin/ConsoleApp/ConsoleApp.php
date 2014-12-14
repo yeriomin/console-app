@@ -205,7 +205,8 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      */
     protected function getAppName()
     {
-        $className = array_pop(explode('\\', get_called_class()));
+        $classParts = explode('\\', get_called_class());
+        $className = array_pop($classParts);
         $nameParts = array();
         foreach (explode('_', $className) as $part) {
             $nameParts[] = lcfirst($part);
