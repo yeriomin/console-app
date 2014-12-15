@@ -10,6 +10,18 @@ namespace Yeriomin\ConsoleApp;
 class ConsoleAppMock extends ConsoleApp
 {
     public function run() {
-        
+        sleep(5);
+    }
+
+    /**
+     * Preventing stdout log output
+     *
+     * @return Psr\Log\LoggerInterface
+     */
+    protected function getLogger()
+    {
+        $logger = parent::getLogger();
+        $logger->popHandler();
+        return $logger;
     }
 }
