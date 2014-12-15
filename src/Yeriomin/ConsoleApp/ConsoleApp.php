@@ -108,22 +108,6 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     }
 
     /**
-     * Attaching signal and error handlers if platform allows it
-     * They do nothing by default in non-single instance mode
-     *
-     * @return void
-     */
-    private function attachHandlers()
-    {
-        if (function_exists('pcntl_signal')) {
-            foreach (self::$signalsToCatch as $signal) {
-                pcntl_signal($signal, array($this, 'signalHandler'));
-            }
-        }
-        set_error_handler(array($this, 'errorHandler'), E_ERROR & E_USER_ERROR);
-    }
-
-    /**
      * We need this to handle termination signals
      *
      */
@@ -219,7 +203,6 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
         }
         $result = array(
             'oneInstanceOnly' => true,
-            'logPath' => $this->appName . '.log',
         );
         if (file_exists($path)) {
             $configula = new \Configula\Config();
@@ -239,7 +222,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     protected function log($message, $priority = Logger::INFO)
     {
         if (null == $this->logger) {
-            $this->setLogger($this->getLogger($this->config));
+            $this->setLogger($this->getLogger());
         }
         $this->logger->log($priority, $message);
     }
@@ -247,46 +230,45 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     /**
      * Init logger
      *
-     * @param array $config Configuration storage
-     *
      * @return Psr\Log\LoggerInterface
      */
-    protected function getLogger(array $config)
+    protected function getLogger()
     {
         $logger = new Logger($this->appName);
+        $logFile = $this->getLogFileName($this->config);
+        $logger->pushHandler(new StreamHandler($logFile));
         $logger->pushHandler(new StreamHandler('php://stdout'));
-        $logFileName = empty($config['logFile'])
-            ? $this->getLogFileName($config)
-            : $config['logFile']
-        ;
-        $logger->pushHandler(new StreamHandler($logFileName));
         return $logger;
     }
 
     /**
      * Get filename of a lock file used for maintaining one instance of self
      *
-     * @param array $config Configuration storage
-     *
      * @return string
      */
-    private function getLockFileName(array $config)
+    private function getLockFileName()
     {
+        $config = $this->config;
         $path = !empty($config['lockDir']) ? $config['lockDir'] : '';
-        return $this->getTempFileName($path) . '.lock';
+        return empty($config['lockFile'])
+            ? $this->getTempFileName($path) . '.lock'
+            : $config['lockFile']
+        ;
     }
 
     /**
      * Build and return log file name based on configuration
      *
-     * @param array $config Configuration storage
-     *
      * @return string
      */
-    private function getLogFileName(array $config)
+    private function getLogFileName()
     {
+        $config = $this->config;
         $path = !empty($config['logDir']) ? $config['logDir'] : '';
-        return $this->getTempFileName($path) . '.log';
+        return empty($config['logFile'])
+            ? $this->getTempFileName($path) . '.log'
+            : $config['logFile']
+        ;
     }
 
     /**
@@ -308,5 +290,21 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
             $path = sys_get_temp_dir();
         }
         return realpath($path) . DIRECTORY_SEPARATOR . $this->appName;
+    }
+
+    /**
+     * Attaching signal and error handlers if platform allows it
+     * They do nothing by default in non-single instance mode
+     *
+     * @return void
+     */
+    private function attachHandlers()
+    {
+        if (function_exists('pcntl_signal')) {
+            foreach (self::$signalsToCatch as $signal) {
+                pcntl_signal($signal, array($this, 'signalHandler'));
+            }
+        }
+        set_error_handler(array($this, 'errorHandler'), E_ERROR & E_USER_ERROR);
     }
 }
