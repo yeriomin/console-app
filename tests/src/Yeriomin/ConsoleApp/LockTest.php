@@ -60,13 +60,44 @@ class LockTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @covers Yeriomin\ConsoleApp\Lock::lock
-     * @covers Yeriomin\ConsoleApp\Lock::unlock
      */
     public function testLockExists()
     {
         file_put_contents($this->testFileName, getmypid());
-        $this->setExpectedException('\\Yeriomin\\ConsoleApp\\ConsoleAppException');
+        $this->setExpectedException(
+            '\\Yeriomin\\ConsoleApp\\ConsoleAppException',
+            'Could not lock ' . $this->testFileName
+        );
         $this->object->lock($this->testFileName);
+    }
+
+    /**
+     * Trying to lock when previous launch of our app crashed
+     * and left a lock file intact
+     *
+     * @covers Yeriomin\ConsoleApp\Lock::lock
+     */
+    public function testLockOtherProcess()
+    {
+        file_put_contents($this->testFileName, '99999999');
+        $this->object->lock($this->testFileName);
+        $this->assertFileExists($this->testFileName);
+        $this->assertEquals(getmypid(), file_get_contents($this->testFileName));
+    }
+
+    /**
+     * Attempting to unlock while the other process is still running
+     * must not break the lock
+     *
+     * @covers Yeriomin\ConsoleApp\Lock::unlock
+     */
+    public function testUnlockOtherProcess()
+    {
+        $fakePid = 99999999;
+        file_put_contents($this->testFileName, $fakePid);
+        $this->object->unlock();
+        $this->assertFileExists($this->testFileName);
+        $this->assertEquals($fakePid, file_get_contents($this->testFileName));
     }
 
     /**

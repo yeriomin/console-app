@@ -13,12 +13,8 @@
 >
     <testsuites>
         <testsuite name="ConsoleApp Test Suite">
+            <file>./tests/src/Yeriomin/ConsoleApp/LockTest.php</file>
             <file>./tests/src/Yeriomin/ConsoleApp/ConsoleAppTest.php</file>
         </testsuite>
     </testsuites>
-    <filter>
-        <whitelist processUncoveredFilesFromWhitelist="true">
-            <directory suffix=".php">src</directory>
-        </whitelist>
-    </filter>
 </phpunit>

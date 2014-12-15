@@ -18,7 +18,7 @@ class ConsoleAppTest extends \PHPUnit_Framework_TestCase
     protected function setUp()
     {
         include_once dirname(__FILE__) . '/ConsoleAppMock.php';
-        $this->object = new ConsoleAppMock();
+        //$this->object = new ConsoleAppMock();
     }
 
     /**
@@ -27,54 +27,25 @@ class ConsoleAppTest extends \PHPUnit_Framework_TestCase
      */
     protected function tearDown()
     {
+        $this->object = null;
     }
 
     /**
-     * @covers Yeriomin\ConsoleApp\ConsoleApp::__destruct
-     * @todo   Implement test__destruct().
+     * Call protected/private method of a class.
+     *
+     * @param object &$object    Instantiated object that we will run method on.
+     * @param string $methodName Method name to call
+     * @param array  $parameters Array of parameters to pass into method.
+     *
+     * @return mixed Method return.
      */
-    public function test__destruct()
+    public function invokeMethod(&$object, $methodName, array $parameters = array())
     {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-            'This test has not been implemented yet.'
-        );
-    }
+        $reflection = new \ReflectionClass(get_class($object));
+        $method = $reflection->getMethod($methodName);
+        $method->setAccessible(true);
 
-    /**
-     * @covers Yeriomin\ConsoleApp\ConsoleApp::unlock
-     * @todo   Implement testUnlock().
-     */
-    public function testUnlock()
-    {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-            'This test has not been implemented yet.'
-        );
-    }
-
-    /**
-     * @covers Yeriomin\ConsoleApp\ConsoleApp::signalHandler
-     * @todo   Implement testSignalHandler().
-     */
-    public function testSignalHandler()
-    {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-            'This test has not been implemented yet.'
-        );
-    }
-
-    /**
-     * @covers Yeriomin\ConsoleApp\ConsoleApp::errorHandler
-     * @todo   Implement testErrorHandler().
-     */
-    public function testErrorHandler()
-    {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-            'This test has not been implemented yet.'
-        );
+        return $method->invokeArgs($object, $parameters);
     }
 
     /**
