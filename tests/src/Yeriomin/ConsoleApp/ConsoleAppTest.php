@@ -109,10 +109,11 @@ class ConsoleAppTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Write the config replacing default values with given values
-     * 
+     *
      * @param array $nonDefaultValues
      */
-    protected function writeConfig(array $nonDefaultValues) {
+    protected function writeConfig(array $nonDefaultValues)
+    {
         $configValues = self::$configValues;
         foreach ($nonDefaultValues as $name => $value) {
             $configValues[$name] = $value;
@@ -235,7 +236,7 @@ class ConsoleAppTest extends \PHPUnit_Framework_TestCase
         $pathDefault = $this->invokeMethod($object1, 'getLogFileName');
         $this->assertEquals(
             realpath(sys_get_temp_dir()) . DIRECTORY_SEPARATOR
-                . 'consoleAppMock.log',
+            . 'consoleAppMock.log',
             $pathDefault
         );
         $testDir = '/tmp/console-app-test-dir';
@@ -276,7 +277,7 @@ class ConsoleAppTest extends \PHPUnit_Framework_TestCase
         $pathDefault = $this->invokeMethod($object1, 'getLockFileName');
         $this->assertEquals(
             realpath(sys_get_temp_dir()) . DIRECTORY_SEPARATOR
-                . 'consoleAppMock.lock',
+            . 'consoleAppMock.lock',
             $pathDefault
         );
         $testDir = '/tmp/console-app-test-dir';
@@ -310,7 +311,8 @@ class ConsoleAppTest extends \PHPUnit_Framework_TestCase
     /**
      * @covers Yeriomin\ConsoleApp\ConsoleApp::__construct
      */
-    public function testConstruct() {
+    public function testConstruct()
+    {
         $configPath = '/some-file-which-does-not-exist';
         $_SERVER['argv'][] = '--config';
         $_SERVER['argv'][] = $configPath;

@@ -24,4 +24,16 @@ class ConsoleAppMock extends ConsoleApp
         $logger->popHandler();
         return $logger;
     }
+
+    /**
+     * Preventing stdout log output
+     *
+     * @return Psr\Log\LoggerInterface
+     */
+    protected function getLogger()
+    {
+        $logger = parent::getLogger();
+        $logger->popHandler();
+        return $logger;
+    }
 }
