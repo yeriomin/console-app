@@ -121,6 +121,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
             Lock::getInstance()->unlock();
         }
         $this->log('Caught signal ' . $signo);
+        $this->log('Stopping ' . $this->appName);
         exit(1);
     }
 
