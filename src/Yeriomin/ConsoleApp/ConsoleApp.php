@@ -101,13 +101,13 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      */
     public function __destruct()
     {
-        $this->log('Stopping ' . $this->appName);
         if ($this->config['oneInstanceOnly']) {
             Lock::getInstance()->unlock();
         }
         if (function_exists('pcntl_signal_dispatch')) {
             pcntl_signal_dispatch();
         }
+        $this->log('Stopping ' . $this->appName);
     }
 
     /**
