@@ -105,6 +105,9 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
         if ($this->config['oneInstanceOnly']) {
             Lock::getInstance()->unlock();
         }
+        if (function_exists('pcntl_signal_dispatch')) {
+            pcntl_signal_dispatch();
+        }
     }
 
     /**
@@ -117,7 +120,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
         if ($this->config['oneInstanceOnly']) {
             Lock::getInstance()->unlock();
         }
-        $this->log('Caught signal ' . $signo . '. Stopping.');
+        $this->log('Caught signal ' . $signo);
         exit(1);
     }
 
@@ -135,6 +138,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
             Lock::getInstance()->unlock();
         }
         $this->log('Error occured: [' . $errno . '] ' . $errstr);
+        $this->log('Stopping ' . $this->appName);
 
         return false;
     }
@@ -310,6 +314,6 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
                 pcntl_signal($signal, array($this, 'signalHandler'));
             }
         }
-        set_error_handler(array($this, 'errorHandler'), E_ERROR & E_USER_ERROR);
+        set_error_handler(array($this, 'errorHandler'), E_ERROR | E_USER_ERROR);
     }
 }
