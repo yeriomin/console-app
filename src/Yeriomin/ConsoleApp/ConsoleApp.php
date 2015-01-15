@@ -15,6 +15,8 @@ use Yeriomin\Getopt;
 abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareInterface
 {
 
+    const DEFAULT_CONFIG = 'config.ini';
+
     /**
      * Signals to process
      *
@@ -75,8 +77,13 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
             echo $this->getopt->getUsageMessage() . "\n";
             exit(0);
         }
+        // If no configuration file is provided but default exists we use it
+        $configPath =
+            empty($this->getopt->config) && file_exists(self::DEFAULT_CONFIG)
+            ? self::DEFAULT_CONFIG
+            : $this->getopt->config
+        ;
         // Reading configuration file if provided
-        $configPath = $this->getopt->config;
         if (!empty($configPath) && !file_exists($configPath)) {
             throw new ConsoleAppException(
                 'Failed to read configuration from "' . $configPath . '"'
