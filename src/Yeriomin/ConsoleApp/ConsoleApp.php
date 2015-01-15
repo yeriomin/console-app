@@ -26,7 +26,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
         SIGTERM,
         SIGINT,
         SIGHUP,
-        SIGQUIT
+        SIGQUIT,
     );
 
     /**
@@ -291,7 +291,8 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      * Remove the lock file and put the last message to the log
      *
      */
-    private function unlockAndLog() {
+    private function unlockAndLog()
+    {
         if ($this->config['oneInstanceOnly']) {
             Lock::getInstance()->unlock();
         }
