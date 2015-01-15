@@ -162,9 +162,11 @@ class ConsoleAppTest extends \PHPUnit_Framework_TestCase
     {
         $object = new ConsoleAppMock();
         $configResult = $this->invokeMethod($object, 'readConfig');
-        $this->assertCount(1, $configResult);
+        $this->assertCount(2, $configResult);
         $this->assertArrayHasKey('oneInstanceOnly', $configResult);
         $this->assertEquals(true, $configResult['oneInstanceOnly']);
+        $this->assertArrayHasKey('consoleOnly', $configResult);
+        $this->assertEquals(true, $configResult['consoleOnly']);
     }
 
     /**
@@ -184,7 +186,7 @@ class ConsoleAppTest extends \PHPUnit_Framework_TestCase
             'readConfig',
             array(self::$configFile)
         );
-        $this->assertCount(2, $configResult);
+        $this->assertCount(3, $configResult);
         $this->assertArrayHasKey('oneInstanceOnly', $configResult);
         $this->assertEquals(false, $configResult['oneInstanceOnly']);
         $this->assertArrayHasKey('someOtherKey', $configResult);
@@ -197,43 +199,27 @@ class ConsoleAppTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetTempFileName()
     {
+        $type = 'other';
         $object = new ConsoleAppMock();
-        $pathDefault = $this->invokeMethod($object, 'getTempFileName');
+        $pathDefault = $this->invokeMethod(
+            $object,
+            'getTempFileName',
+            array($type)
+        );
         $this->assertEquals(
-            realpath(sys_get_temp_dir()) . DIRECTORY_SEPARATOR . 'consoleAppMock',
+            realpath(sys_get_temp_dir()) . DIRECTORY_SEPARATOR
+                . 'consoleAppMock.' . $type
+            ,
             $pathDefault
         );
-        $testDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'dir';
-        mkdir($testDir);
-        $pathExistingDir = $this->invokeMethod(
-            $object,
-            'getTempFileName',
-            array($testDir)
-        );
-        $this->assertEquals(
-            realpath($testDir) . DIRECTORY_SEPARATOR . 'consoleAppMock',
-            $pathExistingDir
-        );
-        rmdir($testDir);
-        $inexistentPath = '/inexistent123456';
-        $this->setExpectedException(
-            '\\Yeriomin\\ConsoleApp\\ConsoleAppException',
-            '"' . $inexistentPath . '" is not a directory'
-        );
-        $this->invokeMethod(
-            $object,
-            'getTempFileName',
-            array($inexistentPath)
-        );
-    }
-
-    /**
-     * @covers Yeriomin\ConsoleApp\ConsoleApp::getLogFileName
-     */
-    public function testGetLogFileName()
-    {
+        Lock::getInstance()->unlock();
+        $type = 'log';
         $object1 = new ConsoleAppMock();
-        $pathDefault = $this->invokeMethod($object1, 'getLogFileName');
+        $pathDefault = $this->invokeMethod(
+            $object1,
+            'getTempFileName',
+            array($type)
+        );
         $this->assertEquals(
             realpath(sys_get_temp_dir()) . DIRECTORY_SEPARATOR
             . 'consoleAppMock.log',
@@ -249,7 +235,11 @@ class ConsoleAppTest extends \PHPUnit_Framework_TestCase
         Lock::getInstance()->unlock();
         $_SERVER['argv'] = self::$argvWithConfig;
         $object2 = new ConsoleAppMock();
-        $pathWithDir = $this->invokeMethod($object2, 'getLogFileName');
+        $pathWithDir = $this->invokeMethod(
+            $object2,
+            'getTempFileName',
+            array($type)
+        );
         $this->assertEquals(
             realpath($testDir) . DIRECTORY_SEPARATOR . 'consoleAppMock.log',
             $pathWithDir
@@ -262,49 +252,54 @@ class ConsoleAppTest extends \PHPUnit_Framework_TestCase
         $this->writeConfig($config3);
         Lock::getInstance()->unlock();
         $object3 = new ConsoleAppMock();
-        $pathWithFile = $this->invokeMethod($object3, 'getLogFileName');
+        $pathWithFile = $this->invokeMethod(
+            $object3,
+            'getTempFileName',
+            array($type)
+        );
         $this->assertEquals($testFile, $pathWithFile);
         unlink($pathWithDir);
         rmdir($testDir);
     }
 
     /**
-     * @covers Yeriomin\ConsoleApp\ConsoleApp::getLockFileName
+     * @covers Yeriomin\ConsoleApp\ConsoleApp::getLogFileName
      */
-    public function testGetLockFileName()
+    public function testGetLogFileName()
     {
         $object1 = new ConsoleAppMock();
-        $pathDefault = $this->invokeMethod($object1, 'getLockFileName');
+        $pathDefault = $this->invokeMethod($object1, 'getTempFileName', array('log'));
         $this->assertEquals(
             realpath(sys_get_temp_dir()) . DIRECTORY_SEPARATOR
-            . 'consoleAppMock.lock',
+            . 'consoleAppMock.log',
             $pathDefault
         );
         $testDir = '/tmp/console-app-test-dir';
         mkdir($testDir);
         $config2 = array(
             'oneInstanceOnly' => false,
-            'lockDir' => $testDir,
+            'logDir' => $testDir,
         );
         $this->writeConfig($config2);
         Lock::getInstance()->unlock();
         $_SERVER['argv'] = self::$argvWithConfig;
         $object2 = new ConsoleAppMock();
-        $pathWithDir = $this->invokeMethod($object2, 'getLockFileName');
+        $pathWithDir = $this->invokeMethod($object2, 'getTempFileName', array('log'));
         $this->assertEquals(
-            realpath($testDir) . DIRECTORY_SEPARATOR . 'consoleAppMock.lock',
+            realpath($testDir) . DIRECTORY_SEPARATOR . 'consoleAppMock.log',
             $pathWithDir
         );
-        $testFile = '/tmp/console-app-test-file.lock';
+        $testFile = '/tmp/console-app-test-file.log';
         $config3 = array(
             'oneInstanceOnly' => false,
-            'lockFile' => $testFile,
+            'logFile' => $testFile,
         );
         $this->writeConfig($config3);
         Lock::getInstance()->unlock();
         $object3 = new ConsoleAppMock();
-        $pathWithFile = $this->invokeMethod($object3, 'getLockFileName');
+        $pathWithFile = $this->invokeMethod($object3, 'getTempFileName', array('log'));
         $this->assertEquals($testFile, $pathWithFile);
+        unlink($pathWithDir);
         rmdir($testDir);
     }
 
