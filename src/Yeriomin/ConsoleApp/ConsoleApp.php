@@ -53,7 +53,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     /**
      * Logger instance
      *
-     * @var Psr\Log\LoggerInterface
+     * @var \Psr\Log\LoggerInterface
      */
     protected $logger;
 
@@ -98,7 +98,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
         }
         // Locking script to let only one instance run at a time.
         if ($this->config['oneInstanceOnly']) {
-            $lockFile = $this->getLockFileName($this->config);
+            $lockFile = $this->getTempFileName('lock');
             Lock::getInstance()->lock($lockFile);
         }
         // Attaching signal and error handlers
@@ -114,13 +114,10 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      */
     public function __destruct()
     {
-        if ($this->config['oneInstanceOnly']) {
-            Lock::getInstance()->unlock();
-        }
         if (function_exists('pcntl_signal_dispatch')) {
             pcntl_signal_dispatch();
         }
-        $this->log('Stopping ' . $this->appName);
+        $this->unlockAndLog();
     }
 
     /**
@@ -130,11 +127,8 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      */
     public function signalHandler($signo)
     {
-        if ($this->config['oneInstanceOnly']) {
-            Lock::getInstance()->unlock();
-        }
         $this->log('Caught signal ' . $signo);
-        $this->log('Stopping ' . $this->appName);
+        $this->unlockAndLog();
         exit(1);
     }
 
@@ -148,11 +142,8 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
      */
     public function errorHandler($errno, $errstr)
     {
-        if ($this->config['oneInstanceOnly']) {
-            Lock::getInstance()->unlock();
-        }
         $this->log('Error occured: [' . $errno . '] ' . $errstr);
-        $this->log('Stopping ' . $this->appName);
+        $this->unlockAndLog();
 
         return false;
     }
@@ -259,61 +250,52 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
     protected function getLogger()
     {
         $logger = new Logger($this->appName);
-        $logFile = $this->getLogFileName($this->config);
+        $logFile = $this->getTempFileName('log');
         $logger->pushHandler(new StreamHandler($logFile));
         $logger->pushHandler(new StreamHandler('php://stdout'));
         return $logger;
     }
 
     /**
-     * Get filename of a lock file used for maintaining one instance of self
-     *
-     * @return string
-     */
-    private function getLockFileName()
-    {
-        $config = $this->config;
-        $path = !empty($config['lockDir']) ? $config['lockDir'] : '';
-        return empty($config['lockFile'])
-            ? $this->getTempFileName($path) . '.lock'
-            : $config['lockFile']
-        ;
-    }
-
-    /**
-     * Build and return log file name based on configuration
-     *
-     * @return string
-     */
-    private function getLogFileName()
-    {
-        $config = $this->config;
-        $path = !empty($config['logDir']) ? $config['logDir'] : '';
-        return empty($config['logFile'])
-            ? $this->getTempFileName($path) . '.log'
-            : $config['logFile']
-        ;
-    }
-
-    /**
      * Build a path to a file in a temp dir for locking or logging
+     * Can be used for any other purpose
+     * Searches configuration for <type>File and <type>Dir values
+     * and builds a path to a file in the system temporary dir if none found
      *
-     * @param string $path
+     * @param string $type
      * @return string
      * @throws ConsoleAppException
      */
-    private function getTempFileName($path = '')
+    protected function getTempFileName($type)
     {
-        if (!empty($path)) {
-            if (!is_dir($path)) {
+        $config = $this->config;
+        if (!empty($config[$type . 'File'])) {
+            return $config[$type . 'File'];
+        }
+        $dir = !empty($config[$type . 'Dir']) ? $config[$type . 'Dir'] : '';
+        if (!empty($dir)) {
+            if (!is_dir($dir)) {
                 throw new ConsoleAppException(
-                    '"' . $path . '" is not a directory'
+                    '"' . $dir . '" is not a directory'
                 );
             }
         } else {
-            $path = sys_get_temp_dir();
+            $dir = sys_get_temp_dir();
         }
-        return realpath($path) . DIRECTORY_SEPARATOR . $this->appName;
+        return realpath($dir) . DIRECTORY_SEPARATOR . $this->appName . '.'
+            . $type
+        ;
+    }
+
+    /**
+     * Remove the lock file and put the last message to the log
+     *
+     */
+    private function unlockAndLog() {
+        if ($this->config['oneInstanceOnly']) {
+            Lock::getInstance()->unlock();
+        }
+        $this->log('Stopping ' . $this->appName);
     }
 
     /**
