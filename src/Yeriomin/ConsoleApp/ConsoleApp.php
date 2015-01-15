@@ -90,6 +90,12 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
             );
         }
         $this->config = $this->readConfig($configPath);
+        // Checking if the script runs in the console
+        if (PHP_SAPI !== 'cli' && $this->config['consoleOnly']) {
+            throw new ConsoleAppException(
+                'This app is supposed to be run in console only'
+            );
+        }
         // Locking script to let only one instance run at a time.
         if ($this->config['oneInstanceOnly']) {
             $lockFile = $this->getLockFileName($this->config);
@@ -220,6 +226,7 @@ abstract class ConsoleApp implements ConsoleAppInterface, \Psr\Log\LoggerAwareIn
         }
         $result = array(
             'oneInstanceOnly' => true,
+            'consoleOnly' => true,
         );
         if (file_exists($path)) {
             $configula = new \Configula\Config();
