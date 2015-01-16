@@ -16,14 +16,14 @@ Install console-app as a dependency
 
 Extend `\Yeriomin\ConsoleApp\ConsoelApp` class and implement the `run()` method.
 
-```
-    <?php
-    class MyConsoleApp extends \Yeriomin\ConsoleApp\ConsoelApp {
-        public function run()
-        {
-            $this->logger->info('Hi');
-        }
+```php
+<?php
+class MyConsoleApp extends \Yeriomin\ConsoleApp\ConsoelApp {
+    public function run()
+    {
+        $this->logger->info('Hi');
     }
+}
 ```
 
 Features
